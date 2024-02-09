@@ -1,8 +1,6 @@
-package com.junioroffers.domain.joboffer;
+package com.junioroffers.domain.offer;
 
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class OfferFacadeTest {
 
