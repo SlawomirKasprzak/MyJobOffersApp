@@ -3,15 +3,19 @@ package com.junioroffers.features;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.junioroffers.BaseIntegrationTest;
 import com.junioroffers.SampleJobOfferResponse;
-import com.junioroffers.infrastructure.offer.scheduler.HttpOfferScheduler;
+import com.junioroffers.domain.offer.dto.OfferResponseDto;
+import com.junioroffers.infrastructure.offer.scheduler.HttpOffersScheduler;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import static org.assertj.core.api.Assertions.assertThat;
+
 
 public class UserWantToSeeOffersIntegrationTest extends BaseIntegrationTest implements SampleJobOfferResponse {
 
     @Autowired
-    HttpOfferScheduler httpOfferScheduler;
+    HttpOffersScheduler httpOffersScheduler;
     @Test
     public void user_have_to_be_logged_in_to_see_job_offers_and_server_need_to_store_some_offers() {
         //step 1: HTTP server does not have any job offers
@@ -19,10 +23,14 @@ public class UserWantToSeeOffersIntegrationTest extends BaseIntegrationTest impl
                 .willReturn(WireMock.aResponse()
                         .withStatus(HttpStatus.OK.value())
                         .withHeader("Content-Type", "application/json")
-                        .withBody(bodyWithFourOffersJson())));
+                        .withBody(bodyWithZeroOffersJson())));
 
-        //step 2: Planner ran for the first time - made GET to external server - system added 0 offers to database
-        httpOfferScheduler.fetchAllOffersAndSaveAllIfNotExists();
+        // step 2: Planner ran for the first time - made GET to external server - system added 0 offers to database
+
+        // given && when
+        List<OfferResponseDto> newOffers = httpOffersScheduler.fetchAllOffersAndSaveAllIfNotExists();
+        // then
+        assertThat(newOffers).isEmpty();
 
         //step 3: User tried to get a token by requesting a POST/token with userName=randomUser; password=randomPassword - system returned unauthorized 401
         //step 4: User made GET/offers with no token and system returned unauthorized 401
