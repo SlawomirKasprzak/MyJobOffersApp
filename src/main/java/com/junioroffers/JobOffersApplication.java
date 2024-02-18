@@ -9,3 +9,4 @@ public class JobOffersApplication {
         SpringApplication.run(JobOffersApplication.class, args);
     }
 }
+
