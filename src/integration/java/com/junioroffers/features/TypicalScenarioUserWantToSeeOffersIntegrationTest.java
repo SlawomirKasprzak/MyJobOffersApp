@@ -73,8 +73,8 @@ public class TypicalScenarioUserWantToSeeOffersIntegrationTest extends BaseInteg
         performGetOffersExistingId.andExpect(status().isNotFound())
                 .andExpect(content().json("""
                         {
-                        "message": "Offer with ID: 9999 not found",
-                        "status": "NOT FOUND"
+                        "message": "Offer with id 9999 not found",
+                        "status": "NOT_FOUND"
                         }
                         """.trim()));
 
