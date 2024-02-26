@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
@@ -62,7 +63,21 @@ public class TypicalScenarioUserWantToSeeOffersIntegrationTest extends BaseInteg
         //step 8: There are 2 new offers in external HTTP server
         //step 9: Planner ran 2nd time and made GET to external server and system added 2 new offers with ID: 1000 and 2000 to database
         //step 10: User made GET/offers with header "Authorized: User A11.B22.C33" and system returned OK 200 with 2 offers with IDs: 1000 and 2000
+
+
         //step 11: User made GET/offers 9999 and system returned NOT_FOUND 404 with message “Offer with ID: 9999 not found”
+        //given
+        //when
+        ResultActions performGetOffersExistingId = mockMvc.perform(get("/offers/9999"));
+        //then
+        performGetOffersExistingId.andExpect(status().isNotFound())
+                .andExpect(content().json("""
+                        {
+                        "message": "Offer with ID: 9999 not found",
+                        "status": "NOT FOUND"
+                        }
+                        """.trim()));
+
         //step 12: User made GET/offers/1000 and system returned OK 200 with offer
         //step 13: There are 2 new offers in external HTTP server
         //step 14: Planner ran 3rd time and made GET to external server and system added 2 new offers  with IDs 3000 and 4000 to database
