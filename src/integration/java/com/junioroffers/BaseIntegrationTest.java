@@ -26,7 +26,6 @@ public class BaseIntegrationTest {
     @Autowired
     public ObjectMapper objectMapper;
 
-
     @Autowired
     public MockMvc mockMvc;
 

@@ -24,7 +24,6 @@ public class OfferHttpClient implements OfferFetchable {
     public List<JobOfferResponse> fetchOffers() {
         log.info("Started fetching offers using http client");
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
         final HttpEntity<HttpHeaders> requestEntity = new HttpEntity<>(headers);
         try {
             String urlForService = getUrlForService("/offers");
