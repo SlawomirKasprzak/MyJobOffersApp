@@ -1,10 +1,13 @@
-package com.junioroffers.domain.login;
+package com.junioroffers.domain.loginandregister;
 
-import com.junioroffers.domain.login.dto.RegisterUserDto;
-import com.junioroffers.domain.login.dto.RegistrationResultDto;
-import com.junioroffers.domain.login.dto.UserDto;
+import com.junioroffers.domain.loginandregister.dto.RegisterUserDto;
+import com.junioroffers.domain.loginandregister.dto.RegistrationResultDto;
+import com.junioroffers.domain.loginandregister.dto.UserDto;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -47,7 +50,7 @@ class LoginAndRegisterFacadeTest {
         Throwable thrown = catchThrowable(() -> loginFacade.findByUsername(username));
         //then
         AssertionsForClassTypes.assertThat(thrown)
-                .isInstanceOf(UsernameNotFoundException.class)
+                .isInstanceOf(BadCredentialsException.class)
                 .hasMessage("User not found");
     }
 

@@ -4,10 +4,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.junioroffers.BaseIntegrationTest;
 import com.junioroffers.SampleJobOfferResponse;
+import com.junioroffers.domain.loginandregister.dto.RegistrationResultDto;
 import com.junioroffers.domain.offer.dto.OfferResponseDto;
+import com.junioroffers.infrastructure.loginandregister.controller.dto.JwtResponseDto;
 import com.junioroffers.infrastructure.offer.scheduler.HttpOffersScheduler;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,21 +65,91 @@ public class TypicalScenarioUserWantToSeeOffersIntegrationTest extends BaseInteg
         assertThat(newOffers).isEmpty();
 
 
-        //step 3: User tried to get a token by requesting a POST/token with userName=randomUser; password=randomPassword - system returned unauthorized 401
+        //step 3: User tried to get a token by requesting a POST/token with userName=someUser; password=somePassword - system returned unauthorized 401
+        // given & when
+        ResultActions failedLoginRequest = mockMvc.perform(post("/token")
+                .content("""
+                        {
+                        "username": "someUser",
+                        "password": "somePassword"
+                        }
+                        """.trim())
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+        );
+        // then
+        failedLoginRequest
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().json("""
+                        {
+                          "message": "Bad Credentials",
+                          "status": "UNAUTHORIZED"
+                        }
+                        """.trim()));
+
+
         //step 4: User made GET/offers with no token and system returned unauthorized 401
-        //step 5: User made POST/register with userName=randomUser and password=randomPassword - system successfully register user with status OK 200
-        //step 6: User tried to get token by requesting POST/token with userName=randomUser; password=randomPassword and system returned OK 200 plus randomToken= A11.B22.C33
+        // given & when
+        ResultActions failedGetOffersRequest = mockMvc.perform(get("/offers")
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+        );
+        // then
+        failedGetOffersRequest.andExpect(status().isForbidden());
 
 
-        //step 7: User made GET/offers with header "Authorized: User A11.B22.C33" and system returned OK 200 with 0 offers
+        //step 5: User made POST/register with userName=someUser and password=somePassword - and system registered user with status CREATED(201)
+        // given & when
+        ResultActions registerAction = mockMvc.perform(post("/register")
+                .content("""
+                        {
+                        "username": "someUser",
+                        "password": "somePassword"
+                        }
+                        """.trim())
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+        );
+        // then
+        MvcResult registerActionResult = registerAction.andExpect(status().isCreated()).andReturn();
+        String registerActionResultJson = registerActionResult.getResponse().getContentAsString();
+        RegistrationResultDto registrationResultDto = objectMapper.readValue(registerActionResultJson, RegistrationResultDto.class);
+        assertAll(
+                () -> assertThat(registrationResultDto.username()).isEqualTo("someUser"),
+                () -> assertThat(registrationResultDto.created()).isTrue(),
+                () -> assertThat(registrationResultDto.id()).isNotNull()
+        );
+
+
+        //step 6: User tried to get token by requesting POST/token with userName=someUser; password=somePassword and system returned OK 200 plus randomToken= AAAA.BBBB.CCC
+        // given & when
+        ResultActions successLoginRequest = mockMvc.perform(post("/token")
+                .content("""
+                        {
+                        "username": "someUser",
+                        "password": "somePassword"
+                        }
+                        """.trim())
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+        );
+        // then
+        MvcResult mvcResult = successLoginRequest.andExpect(status().isOk()).andReturn();
+        String json = mvcResult.getResponse().getContentAsString();
+        JwtResponseDto jwtResponse = objectMapper.readValue(json, JwtResponseDto.class);
+        String token = jwtResponse.token();
+        assertAll(
+                () -> assertThat(jwtResponse.username()).isEqualTo("someUser"),
+                () -> assertThat(token).matches(Pattern.compile("^([A-Za-z0-9-_=]+\\.)+([A-Za-z0-9-_=])+\\.?$"))
+        );
+
+
+        //step 7: User made GET/offers with header "Authorized: User AAAA.BBBB.CCC" and system returned OK 200 with 0 offers
         // given
         String offersUrl = "/offers";
         // when
         ResultActions perform = mockMvc.perform(get(offersUrl)
+                .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
         );
         // then
-        MvcResult mvcResult2 = perform.andExpect(status().isOk()).andReturn();
+         MvcResult mvcResult2 = perform.andExpect(status().isOk()).andReturn();
         String jsonWithOffers = mvcResult2.getResponse().getContentAsString();
         List<OfferResponseDto> offers = objectMapper.readValue(jsonWithOffers, new TypeReference<>() {
         });
@@ -99,7 +172,7 @@ public class TypicalScenarioUserWantToSeeOffersIntegrationTest extends BaseInteg
         assertThat(twoNewOffers).hasSize(2);
 
 
-        //step 10: User made GET/offers with header "Authorized: User A11.B22.C33" and system returned OK 200 with 2 offers with IDs: 1000 and 2000
+        //step 10: User made GET/offers with header "Authorized: User AAAA.BBBB.CCC" and system returned OK 200 with 2 offers with IDs: 1000 and 2000
         // given && when
         ResultActions performGetForTwoOffers = mockMvc.perform(get(offersUrl)
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -164,7 +237,7 @@ public class TypicalScenarioUserWantToSeeOffersIntegrationTest extends BaseInteg
         assertThat(nextTwoNewOffers).hasSize(2);
 
 
-        //step 15: User made GET/offers with header “authorized: User A11.B22.C33” and system returned OK 200 with 4 offers with 1000, 2000, 3000 and 4000
+        //step 15: User made GET/offers with header “authorized: User AAAA.BBBB.CCC” and system returned OK 200 with 4 offers with 1000, 2000, 3000 and 4000
         // given && when
         ResultActions performGetForFourOffers = mockMvc.perform(get(offersUrl)
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -182,7 +255,8 @@ public class TypicalScenarioUserWantToSeeOffersIntegrationTest extends BaseInteg
                 new OfferResponseDto(expectedFourthOffer.id(), expectedFourthOffer.companyName(), expectedFourthOffer.position(), expectedFourthOffer.salary(), expectedFourthOffer.offerUrl()
                 ));
 
-        //step 16: User made POST/offers with header “authorized: User A11.B22.C33” - system returned CREATED 201 with saved offer
+
+        //step 16: User made POST/offers with header “authorized: User AAAA.BBBB.CCC” - system returned CREATED 201 with saved offer
         // given
         // when
         ResultActions performPostOffersWithOneOffer = mockMvc.perform(post("/offers")
@@ -212,7 +286,8 @@ public class TypicalScenarioUserWantToSeeOffersIntegrationTest extends BaseInteg
                 () -> assertThat(id).isNotNull()
         );
 
-        //step 17: User made GET/offers with header “authorized: User A11.B22.C33” and system returned OK 200 with 1 offer
+
+        //step 17: User made GET/offers with header “authorized: User AAAA.BBBB.CCC” and system returned OK 200 with 1 offer
         // given & when
         ResultActions performGetOffers = mockMvc.perform(get("/offers")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
