@@ -4,6 +4,7 @@ import com.junioroffers.domain.offer.dto.OfferRequestDto;
 import com.junioroffers.domain.offer.dto.OfferResponseDto;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
+import springfox.documentation.annotations.Cacheable;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,6 +14,7 @@ public class OfferFacade {
     private final OfferRepository offerRepository;
     private final OfferService offerService;
 
+    @Cacheable("jobOffers")
     public List<OfferResponseDto> findAllOffers() {
         return offerRepository.findAll()
                 .stream()
